@@ -16,10 +16,6 @@
 
 using namespace std;
 #define pair_int pair< int, int >
-#define neta_default .0001
-#define iter_default 10
-#define thread_default 10
-#define is_intercept false
 
 // struct node {
 //  map<int, float > features;
@@ -31,10 +27,10 @@ int main(int argc, char* argv[]) {
     std::string line;
     int n,d,src,dest,weight;
     float intercept = 0.0;
-    float neta = neta_default;
-    int threads = thread_default;
+    float neta = 0.0001;
+    int threads = 1;
     int iter = iter_default;
-    char* filename = "madelon"; // "inputfile"; //"madelon";
+    char* filename = "rcv1";
     double lambda1 = 0.0;
     double lambda2 = 0.0;
     int show_errors = 1;
@@ -51,13 +47,12 @@ int main(int argc, char* argv[]) {
 
     if(!inFile.is_open())
         {
-        cout << "Unable to open file graph.txt. \nProgram terminating...\n";
+        cout << "Unable to open file";
                 return 0;
         }
     getline(inFile, line);
     istringstream iss(line);
     iss>>n>>d;
-    // cout<<n<<" "<<d<<endl;
     vector<float> Y;
     vector<map<int, float> > X;
     vector<float> w;
@@ -66,21 +61,15 @@ int main(int argc, char* argv[]) {
     Y.resize(n);
     X.resize(n);
     w.resize(d);
-        // maxX.assign(d,0);
     float initial_w = 0;
     int j=0;
-    //j -> sample, i -> feature
     while (j < n)
     {
         getline(inFile, line);
         istringstream iss(line);
         iss >> Y[j]; string k; int i = 0;
-        // for (int i=0; i<d; i++) {
         while(iss >> k) {
-            // if(j == 0) w[i] = initial_w;
-            // int k = 1;
-            // inFile >> k; 
-            if(strcmp(filename, "mnist") == 0) {
+            if(strcmp(filename, "rcv1") == 0) {
                 size_t pos = k.find(":");
                 X[j][atoi((k.substr(0,pos)).c_str())] = atof((k.substr(pos+1)).c_str());
                 maxX = 255;
@@ -97,7 +86,6 @@ int main(int argc, char* argv[]) {
     if (j != n) {
         cout << "File input error" << endl; return 0;
     }   
-    //Normalize
     if(maxX != 0) {
         for(int j = 0; j < n; j++) {
             for(int i = 0; i< d; i++) 
@@ -108,19 +96,14 @@ int main(int argc, char* argv[]) {
     }
         
     inFile.close();
-    //converging values: MADELON "***"
-    cout << "No .of samples=" << n << " No of features=" << d << endl;
-    cout << "Neta : "<< neta << " Iterations : "<< iter << " Threads :"<< threads << endl;
-
     float w_next;
     struct timeval start, end;
-    gettimeofday(&start, NULL); //start time of the actual algorithm
+    gettimeofday(&start, NULL);
   
     #pragma omp parallel for num_threads(threads)             
     for (int k = 0; k < iter; k++) {
                 int j = rand() % n;
                 float val = intercept - Y[j];
-            // #pragma omp parallel for reduction(+ : val) num_threads(threads)
             for (map<int, float>::iterator it=X[j].begin(); it!=X[j].end(); ++it) {
                 val += (w[it->first] * it->second);
             }
@@ -153,12 +136,6 @@ int main(int argc, char* argv[]) {
         cout<<"Error : "<<error<<endl;  
         
     gettimeofday(&end, NULL); 
-    cout << "SGD Completed" << endl;
-    printf ("Elasped time is %.4lf seconds.\n", (((end.tv_sec  - start.tv_sec) * 1000000u +  end.tv_usec - start.tv_usec) / 1.e6) );
-    // if(is_intercept) cout << intercept << endl;
-    // for (int i=0;i< w.size();i++) {
-    //  cout << w[i] << endl;
-    //    }
-    
+    cout << "SGD Done" << endl;
     return 0;
 }
