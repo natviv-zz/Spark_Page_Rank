@@ -7,15 +7,12 @@
 #include "Galois/ParallelSTL/ParallelSTL.h"
 #include "llvm/Support/CommandLine.h"
 #include "Galois/Runtime/WorkList.h"
-
 #include "Lonestar/BoilerPlate.h"
 #include<sys/time.h>
-
 #include <utility>
 #include <algorithm>
 #include <iostream>
 #include "Galois/Statistic.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,10 +28,6 @@
 
 using namespace std;
 #define pair_int pair< int, int >
-#define neta_default .0001
-#define iter_default 10
-#define thread_default 10
-#define is_intercept false
 
 int n,d,src,dest,weight;
 float neta;
@@ -91,12 +84,11 @@ int main(int argc, char* argv[]) {
 	Galois::StatManager statManager;
 	ifstream inFile;
 	std::string line;
-        neta = neta_default; 
-	int threads = thread_default;
-        int iter = iter_default;
+        neta = 0.0001; 
+	int threads = 1;
+        int iter = 100;
         int show_errors = 1;
-	//inFile.open("inputfile", ifstream::in);
-    char* filename = "madelon"; // "inputfile"; //"madelon";
+	inFile.open("inputfile", ifstream::in);
         
         if(argc > 3) {
             neta = atof(argv[1]);
@@ -109,7 +101,7 @@ int main(int argc, char* argv[]) {
 	inFile.open(filename, ifstream::in);
         if(!inFile.is_open())
         {
-		cout << "Unable to open file graph.txt. \nProgram terminating...\n";
+		cout << "Unable to open file graph.txt";
                 return 0;
         }
     getline(inFile, line);
@@ -132,7 +124,7 @@ int main(int argc, char* argv[]) {
                 // if(j == 0) w[i] = initial_w;
                 // int k = 1;
                 // inFile >> k; 
-                if(strcmp(filename, "mnist") == 0) {
+                if(strcmp(filename, "rcv1") == 0) {
                     size_t pos = k.find(":");
                     Graph[j].features[atoi((k.substr(0,pos)).c_str())] = atof((k.substr(pos+1)).c_str());
                     maxX = 255;
@@ -156,17 +148,13 @@ int main(int argc, char* argv[]) {
             cout<< "Factor :" << maxX << endl;
         }
 
-	inFile.close();
-	cout << "No .of samples=" << n << " No of features=" << d << endl;
-        cout << "Neta : "<< neta << " Iterations : "<< iter << endl;
+	inFile.closse();
 	
-	//typedef GaloisRuntime::WorkList::LIFO<> WL;
-	typedef GaloisRuntime::WorkList::ChunkedFIFO<128> WL;
-	//typedef GaloisRuntime::WorkList::dChunkedFIFO<128> WL;
-	//typedef GaloisRuntime::WorkList::FIFO<> WL;
-	//typedef GaloisRuntime::WorkList::LocalQueues<> WL;
-    struct timeval start, end;
-    gettimeofday(&start, NULL); //start time of the actual algorithm
+	
+	typedef Galois::WorkList::ChunkedFIFO<32> WL;
+	
+    	struct timeval start, end;
+    	gettimeofday(&start, NULL);
 
 	for (int k = 0; k < iter; k++) {
  		Galois::for_each<WL>(Graph.begin(), Graph.end(), Process());
@@ -182,8 +170,6 @@ int main(int argc, char* argv[]) {
                     cout<<"Error : "<<error<<endl;
                 }
     	}
-    gettimeofday(&end, NULL); 
-
                         double error = 0.0;
                     for (int i = 0; i < n; i++) {
                             double partError = 0.0 - Y[i];
@@ -195,10 +181,6 @@ int main(int argc, char* argv[]) {
                     cout<<"Error : "<<error<<endl;
                     
 	cout << "SGD Completed" << endl;
-    printf ("Elasped time is %.4lf seconds.\n", (((end.tv_sec  - start.tv_sec) * 1000000u +  end.tv_usec - start.tv_usec) / 1.e6) );
-//	for (int i=0;i<d;i++) {
-//		cout << w[i].value << endl;
-//        }
 	
   	return 0;
 }
