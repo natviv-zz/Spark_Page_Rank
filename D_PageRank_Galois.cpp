@@ -8,7 +8,7 @@ using namespace std;
 static const char* const name = "PAGERANK";
 static const char* const desc = "Compute PAGE rank";
 static const char* const url = 0;
-
+double threshold = 0.0001;
 typedef struct Node {
 double prev_val;
 double now_val;
@@ -42,6 +42,32 @@ data.now_val = sum;
 }
 };
 
+struct dynamic_update {
+Graph& g;
+dynamic_update(Graph &_g): g(_g){}
+void operator()(GNode n, Galois::UserContext<GNode>& ctx){
+double sum = 0.0;
+for (auto edge_it : g.out_edges(n, Galois::NONE)) {
+GNode variable_node = g.getEdgeDst(edge_it);
+Node& data = g.getData(variable_node, Galois::NONE);
+double weight = g.getEdgeData(edge_it, Galois::NONE);
+sum += data.prev_val * weight;
+}
+Node& data = g.getData(n, Galois::NONE);
+data.now_val = sum;
+//Data driven push - Put into worklist only if necessary
+if(abs(data.now_val-data.prev_val)>threshold){
+  for (auto edge_it : g.out_edges(n, Galois::NONE)) {
+    GNode variable_node = g.getEdgeDst(edge_it);
+    Node& data = g.getData(variable_node, Galois::NONE);
+    double weight = g.getEdgeData(edge_it, Galois::NONE);
+    ctx.push(std::make_pair(weight,variable_node);
+  }
+}
+
+}
+};
+
 void multiply(Graph &g)
 {
 auto ln = Galois::loopname("PAGERANK");
@@ -64,7 +90,12 @@ data.now_val = sum;
 */
 }
 
-
+void multiply2(Graph &g)void multiply(Graph &g)
+{
+auto ln = Galois::loopname("PAGERANK");
+auto wl = Galois::wl<Galois::WorkList::dChunkedFIFO<32>>();
+Galois::for_each(g.begin(), g.end(), dynamic_update(g), ln, wl);
+}
 
 int main(int argc, char** argv) {
 LonestarStart(argc, argv, name, desc, url);
@@ -101,6 +132,7 @@ data.prev_val = data.now_val*(1-alpha) + alpha*one_over_n;
 }
 PagerankTime.stop();
 printf("Time: %lf secs\n", PagerankTime.get()/1e3);
+
 vector<mypair> results(numnodes);
 for ( int i=0 ; i<numnodes ; i++ ) {
 results[i].first = i+1;
@@ -111,5 +143,27 @@ printf("Top Nodes: ");
 for ( int i=0 ; i<10 ; i++ )
 printf("%d:%.8lf ", results[i].first, results[i].second);
 printf("\n");
+
+//Dynamic PageRank
+Galois::StatTimer PagerankTime("pagerank");
+PagerankTime.start();
+//Note only 5 iterations
+for ( int i=0 ; i<5 ; i++) {
+multiply(g);
+Galois::do_all(g.begin(), g.end(), [&](GNode n) {
+Node& data = g.getData(n);
+data.prev_val = data.now_val*(1-alpha) + alpha*one_over_n;
+
+
+});
+}
+//Do the dynamic data driven update
+Galois::do_all(g.begin(), g.end(),dynamic_update);
+
+PagerankTime.stop();
+printf("Time: %lf secs\n", PagerankTime.get()/1e3);
+
+
+
 return 0;
 }
