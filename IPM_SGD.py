@@ -5,8 +5,8 @@ from numpy import array, random as np_random
 from sklearn import linear_model as lm
 from sklearn.base import copy
  
-N = 10000   # Number of data points
-D = 10      # Numer of dimensions
+N = 10000   #samples
+D = 10      #dimensions
 ITERATIONS = 5
 np_random.seed(seed=42)
  
@@ -32,9 +32,9 @@ def avg_model(sgd, slices):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print >> sys.stderr, \
-            "Usage: PythonLR <master> <iterations> [<slices>]"
+            "Usage: PythonLR <master> <iterations>"
         exit(-1)
-    #print sys.argv
+    
  
     sc = SparkContext(sys.argv[1], "PythonLR")
     ITERATIONS = int(sys.argv[2]) if len(sys.argv) > 2 else ITERATIONS
@@ -42,14 +42,13 @@ if __name__ == "__main__":
     data = generate_data(N)
     print len(data)
  
-    # init stochastic gradient descent
+    # initializing SGD
     sgd = lm.SGDClassifier(loss='log')
-    # training
     for ii in range(ITERATIONS):
         sgd = sc.parallelize(data, numSlices=slices) \
                 .mapPartitions(lambda x: train(x, sgd)) \
                 .reduce(lambda x, y: merge(x, y))
-        sgd = avg_model(sgd, slices) # averaging weight vector => iterative parameter mixtures
+        sgd = avg_model(sgd, slices) # averaging weight vector for IPM update
         print "Iteration %d:" % (ii + 1)
         print "Model: "
         print sgd.coef_
